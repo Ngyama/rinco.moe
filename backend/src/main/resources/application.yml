@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: vn-analytics
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/vn_analytics_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+bangumi:
+  base-url: https://api.bgm.tv
+  token: ${BANGUMI_TOKEN:}
+  user-agent: ${BANGUMI_USER_AGENT:linxyc29300/rinco-vn-analytics}

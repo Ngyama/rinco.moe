@@ -1,0 +1,23 @@
+# Local env
+backend/.env
+
+# Do not track docs or scripts (per project preference)
+docs/
+scripts/
+
+# Accidental JS emit beside Vue SFCs / duplicate TS entrypoints (Vite uses .ts + .vue)
+frontend/src/**/*.vue.js
+frontend/src/main.js
+frontend/src/router/index.js
+frontend/src/api/client.js
+frontend/src/App.vue.js
+
+# Dependencies & build output
+frontend/node_modules/
+frontend/dist/
+backend/target/
+*.tsbuildinfo
+
+# OS / IDE
+.DS_Store
+Thumbs.db
