@@ -1,37 +1,52 @@
-# Rinco VN Analytics
+# Rinco Analytics
 
-Visual Novel 数据分析平台（Spring Boot + Vue 前后端分离）。
+**日本語** | [English](README.en.md) | [简体中文](README.zh.md)
 
-## 项目结构
+ビジュアルノベル作品向けの横断スコア・傾向を扱う Web アプリです。Bangumi / VNDB / ErogameScape など複数ソースを束ね、マッチした作品プール上でランキングや可視化を行います。
 
-- `backend`：Spring Boot 后端服务
-- `frontend`：Vue 3 前端应用
-- `docs`：需求与实施提示文档
+---
 
-## 启动方式
+## プロジェクト概要
 
-### 后端
+本リポジトリは **Spring Boot バックエンド** と **Vue 3 フロントエンド** で構成されています。主な画面・機能は次のとおりです。
 
-```bash
-cd backend
-mvn spring-boot:run
-```
+- **Global** — マッチプール内の三サイト別トップ一覧、三站加重 Top10、サンキー図など
+- **Trend** — Bangumi ベースの年次トレンド・スコア推移の閲覧
+- **Hot** — ホット作品一覧と詳細
+- **Controversy** — スコア分散が大きい作品（「争い」が大きい作品）の把握
+- **Tag** — タグまわりの閲覧・分析
+- **Staff** — スタッフ（声優・シナリオ等）情報の閲覧
+- **User** — ユーザーコレクション連携の閲覧
+- **About** — プロジェクト紹介とナビゲーション
 
-默认端口：`8080`  
-健康检查：`GET /api/health`
+---
 
-### 前端
+## 画面イメージ
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+> **（予定）** 
 
-默认本地地址：`http://localhost:5173`
+<!-- 例: ![Global](docs/screenshots/global.png) -->
 
-## 当前进度
+---
 
-- 已完成项目骨架搭建
-- 已完成首页及模块入口路由
-- 子页面为占位，等待逐页开发
+## 技術スタック
+
+| 層 | 技術 |
+|----|------|
+| フロントエンド | Vue 3, Vue Router, TypeScript, Vite |
+| バックエンド | Java, Spring Boot, Spring JDBC |
+| DB | PostgreSQL |
+
+---
+
+## データの出所
+
+本プロジェクトは **各サイトの公開 API・統計ページ等から取得したデータ** を分析・表示するものであり、各サービスの利用規約・ポリシーに従ってください。
+
+| ソース | 用途の例 |
+|--------|-----------|
+| **Bangumi** | 作品メタデータ・スコア・タグ・トレンド系 |
+| **VNDB** | VN 作品・スコア・タグ |
+| **ErogameScape (EGS)** | 平均点など（SQL API 等） |
+
+一次データの正確さ・更新頻度はソース側に依存します。再配布や商用利用を行う場合は、各サイトの条件を必ず確認してください。

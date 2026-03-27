@@ -17,4 +17,10 @@ public class GlobalSchemaMapper {
         jdbcTemplate.execute("ALTER TABLE IF EXISTS vn_vndb_subject ADD COLUMN IF NOT EXISTS excluded_from_rank BOOLEAN NOT NULL DEFAULT FALSE");
         jdbcTemplate.execute("ALTER TABLE IF EXISTS vn_egs_subject ADD COLUMN IF NOT EXISTS excluded_from_rank BOOLEAN NOT NULL DEFAULT FALSE");
     }
+
+    /** Persisted weighted combined score; only triple-complete rows with all scores get a value. */
+    public void ensureMatchTripleCombinedWeightedColumn() {
+        jdbcTemplate.execute(
+                "ALTER TABLE vn_match_triple ADD COLUMN IF NOT EXISTS combined_weighted_score DOUBLE PRECISION");
+    }
 }

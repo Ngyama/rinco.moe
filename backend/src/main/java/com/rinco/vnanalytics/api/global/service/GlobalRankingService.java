@@ -8,6 +8,7 @@ import com.rinco.vnanalytics.api.global.mapper.GlobalSchemaMapper;
 import com.rinco.vnanalytics.api.global.mapper.VndbRankingMapper;
 import com.rinco.vnanalytics.api.global.model.BangumiGameItem;
 import com.rinco.vnanalytics.api.global.model.BangumiGlobalResponse;
+import com.rinco.vnanalytics.api.global.model.GlobalCombinedRankItem;
 import com.rinco.vnanalytics.api.global.model.GlobalDualTopResponse;
 import com.rinco.vnanalytics.api.global.model.GlobalSiteScoreItem;
 import com.rinco.vnanalytics.api.global.policy.GlobalRankingPolicy;
@@ -39,6 +40,7 @@ public class GlobalRankingService {
         this.egsRankingMapper = egsRankingMapper;
         bangumiRankingMapper.ensureBangumiSubjectTable();
         globalSchemaMapper.ensureRankingExcludeColumns();
+        globalSchemaMapper.ensureMatchTripleCombinedWeightedColumn();
     }
 
     public BangumiGlobalResponse fetchGameTopList(int limit, int offset) {
@@ -51,15 +53,17 @@ public class GlobalRankingService {
         String regex = GlobalRankingPolicy.EDITION_EXCLUSION_REGEX;
         int minVotes = GlobalRankingPolicy.MIN_VOTES_FOR_TOP;
         if (matchedOnly) {
+            bangumiRankingMapper.refreshCombinedWeightedScores();
             List<GlobalSiteScoreItem> bangumi = bangumiRankingMapper.queryCuratedPoolBangumi(safeLimit);
             List<GlobalSiteScoreItem> vndb = vndbRankingMapper.queryCuratedPoolVndb(safeLimit);
             List<GlobalSiteScoreItem> egs = egsRankingMapper.queryCuratedPoolEgs(safeLimit);
-            return new GlobalDualTopResponse(safeLimit, bangumi, vndb, egs);
+            List<GlobalCombinedRankItem> combinedTop10 = bangumiRankingMapper.queryCuratedPoolCombinedTop(10);
+            return new GlobalDualTopResponse(safeLimit, bangumi, vndb, egs, combinedTop10);
         }
         List<GlobalSiteScoreItem> bangumi = bangumiRankingMapper.queryTop(minVotes, safeLimit, regex);
         List<GlobalSiteScoreItem> vndb = vndbRankingMapper.queryTop(minVotes, safeLimit, regex);
         List<GlobalSiteScoreItem> egs = egsRankingMapper.queryTop(minVotes, safeLimit, regex);
-        return new GlobalDualTopResponse(safeLimit, bangumi, vndb, egs);
+        return new GlobalDualTopResponse(safeLimit, bangumi, vndb, egs, List.of());
     }
 
     public int setRankExcluded(String platform, String subjectId, boolean excluded) {

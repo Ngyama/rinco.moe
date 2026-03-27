@@ -1,6 +1,7 @@
 package com.rinco.vnanalytics.api.global.mapper;
 
 import com.rinco.vnanalytics.api.global.model.BangumiGameItem;
+import com.rinco.vnanalytics.api.global.model.GlobalCombinedRankItem;
 import com.rinco.vnanalytics.api.global.model.GlobalSiteScoreItem;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -200,6 +201,86 @@ public class BangumiRankingMapper {
                 rs.getInt("rank_value"),
                 rs.getString("title_jp"),
                 readNullableDouble(rs, "score_value"),
+                readMatchTripleId(rs)
+        ), limit);
+    }
+
+    /**
+     * Recompute {@code vn_match_triple.combined_weighted_score}: all rows cleared first, then triple-complete
+     * rows with resolvable scores get 0.5×BGM + 0.25×VNDB + 0.25×(EGS%/10). EGS is stored as 0–100 percent.
+     */
+    public void refreshCombinedWeightedScores() {
+        jdbcTemplate.update("UPDATE vn_match_triple SET combined_weighted_score = NULL");
+        String fill = """
+                UPDATE vn_match_triple m
+                SET combined_weighted_score = sub.combined
+                FROM (
+                    SELECT
+                        m.id,
+                        (0.5 * COALESCE(m.bangumi_score, bs.score_exact, bs.score_api, bs.score)
+                            + 0.25 * COALESCE(m.vndb_score, vs.score_exact, vs.score_api, vs.score)
+                            + 0.25 * (COALESCE(m.egs_score, es.score_avg) / 10.0)
+                        ) AS combined
+                    FROM vn_match_triple m
+                    INNER JOIN vn_bangumi_subject bs ON bs.bangumi_subject_id = m.bangumi_subject_id
+                    INNER JOIN vn_vndb_subject vs ON vs.vndb_subject_id = m.vndb_subject_id
+                    INNER JOIN vn_egs_subject es ON es.egs_game_id = m.egs_game_id
+                    WHERE m.bangumi_subject_id IS NOT NULL
+                      AND m.vndb_subject_id IS NOT NULL
+                      AND m.egs_game_id IS NOT NULL
+                      AND COALESCE(m.bangumi_score, bs.score_exact, bs.score_api, bs.score) IS NOT NULL
+                      AND COALESCE(m.vndb_score, vs.score_exact, vs.score_api, vs.score) IS NOT NULL
+                      AND COALESCE(m.egs_score, es.score_avg) IS NOT NULL
+                ) sub
+                WHERE m.id = sub.id
+                """;
+        jdbcTemplate.update(fill);
+    }
+
+    /**
+     * Triple-complete rows in match pool; combined score read from {@code m.combined_weighted_score}
+     * (call {@link #refreshCombinedWeightedScores()} first). EGS contribution uses percent ÷ 10 as 10-point.
+     */
+    public List<GlobalCombinedRankItem> queryCuratedPoolCombinedTop(int limit) {
+        String sql = """
+                WITH scored AS (
+                    SELECT
+                        m.id AS match_triple_id,
+                        COALESCE(NULLIF(TRIM(COALESCE(bs.title_jp, '')), ''), NULLIF(TRIM(COALESCE(bs.title, '')), ''), '—') AS title_jp,
+                        COALESCE(m.bangumi_score, bs.score_exact, bs.score_api, bs.score) AS s_bgm,
+                        COALESCE(m.vndb_score, vs.score_exact, vs.score_api, vs.score) AS s_vndb,
+                        COALESCE(m.egs_score, es.score_avg) AS s_egs,
+                        m.combined_weighted_score AS combined_score
+                    FROM vn_match_triple m
+                    INNER JOIN vn_bangumi_subject bs ON bs.bangumi_subject_id = m.bangumi_subject_id
+                    INNER JOIN vn_vndb_subject vs ON vs.vndb_subject_id = m.vndb_subject_id
+                    INNER JOIN vn_egs_subject es ON es.egs_game_id = m.egs_game_id
+                    WHERE m.bangumi_subject_id IS NOT NULL
+                      AND m.vndb_subject_id IS NOT NULL
+                      AND m.egs_game_id IS NOT NULL
+                      AND m.combined_weighted_score IS NOT NULL
+                )
+                SELECT
+                    ROW_NUMBER() OVER (
+                        ORDER BY combined_score DESC NULLS LAST, match_triple_id ASC
+                    ) AS rank_value,
+                    match_triple_id,
+                    title_jp,
+                    s_bgm AS score_bgm,
+                    s_vndb AS score_vndb,
+                    s_egs AS score_egs,
+                    combined_score
+                FROM scored
+                ORDER BY combined_score DESC NULLS LAST, match_triple_id ASC
+                LIMIT ?
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new GlobalCombinedRankItem(
+                rs.getInt("rank_value"),
+                rs.getString("title_jp"),
+                readNullableDouble(rs, "score_bgm"),
+                readNullableDouble(rs, "score_vndb"),
+                readNullableDouble(rs, "score_egs"),
+                readNullableDouble(rs, "combined_score"),
                 readMatchTripleId(rs)
         ), limit);
     }

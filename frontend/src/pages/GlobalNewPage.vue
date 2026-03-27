@@ -95,6 +95,13 @@
         </section>
       </div>
 
+      <GlobalCombinedTopPanel
+        v-if="!loading && !error"
+        :items="data.combinedTop10 ?? []"
+        @hover-item="onCombinedHover"
+        @hover-end="onHoverEnd"
+      />
+
       <GlobalSankeyPanel
         v-if="!loading && !error"
         :key="dataEpoch"
@@ -111,6 +118,7 @@ import { computed, nextTick, onMounted, ref } from "vue";
 import { apiGet } from "../api/client";
 import PageProgressBar from "../components/PageProgressBar.vue";
 import GlobalSankeyPanel from "../components/GlobalSankeyPanel.vue";
+import GlobalCombinedTopPanel from "../components/GlobalCombinedTopPanel.vue";
 
 interface GlobalScoreItem {
   rank: number;
@@ -120,11 +128,22 @@ interface GlobalScoreItem {
   matchTripleId?: number | null;
 }
 
+interface CombinedRankItem {
+  rank: number;
+  titleJp: string;
+  bangumiScore: number;
+  vndbScore: number;
+  egsScore: number;
+  combinedScore: number;
+  matchTripleId?: number | null;
+}
+
 interface DualTopResponse {
   limit: number;
   bangumi: GlobalScoreItem[];
   vndb: GlobalScoreItem[];
   egs: GlobalScoreItem[];
+  combinedTop10?: CombinedRankItem[];
 }
 
 function normalizeTitle(s: string): string {
@@ -138,7 +157,8 @@ const data = ref<DualTopResponse>({
   limit: 25,
   bangumi: [],
   vndb: [],
-  egs: []
+  egs: [],
+  combinedTop10: []
 });
 
 /** Bump to remount Sankey after each successful fetch (layout/cache from prior props). */
@@ -199,6 +219,14 @@ function onHoverEnd() {
   hoverHighlight.value = null;
 }
 
+function onCombinedHover(matchTripleId: number | null) {
+  if (matchTripleId == null) {
+    hoverHighlight.value = null;
+    return;
+  }
+  hoverHighlight.value = { matchTripleId, titleNorm: "" };
+}
+
 async function loadData() {
   loading.value = true;
   error.value = "";
@@ -216,12 +244,13 @@ async function loadData() {
       limit: result.limit,
       bangumi: result.bangumi ?? [],
       vndb: result.vndb ?? [],
-      egs: result.egs ?? []
+      egs: result.egs ?? [],
+      combinedTop10: result.combinedTop10 ?? []
     };
     dataEpoch.value += 1;
   } catch (e) {
     error.value = e instanceof Error ? e.message : "加载失败";
-    data.value = { limit: 25, bangumi: [], vndb: [], egs: [] };
+    data.value = { limit: 25, bangumi: [], vndb: [], egs: [], combinedTop10: [] };
   } finally {
     loading.value = false;
     await nextTick();
