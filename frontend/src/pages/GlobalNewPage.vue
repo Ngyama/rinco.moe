@@ -24,6 +24,7 @@
               :key="`bgm-${item.matchTripleId ?? 'x'}-${item.rank}-${item.titleJp}`"
               class="game-card"
               :class="{ highlighted: isHighlighted('bangumi', idx) }"
+              :ref="(el) => setCardRef('bangumi', idx, el)"
               @mouseenter="onHover('bangumi', idx)"
               @mouseleave="onHoverEnd"
             >
@@ -50,6 +51,7 @@
               :key="`vndb-${item.matchTripleId ?? 'x'}-${item.rank}-${item.titleJp}`"
               class="game-card"
               :class="{ highlighted: isHighlighted('vndb', idx) }"
+              :ref="(el) => setCardRef('vndb', idx, el)"
               @mouseenter="onHover('vndb', idx)"
               @mouseleave="onHoverEnd"
             >
@@ -76,6 +78,7 @@
               :key="`egs-${item.matchTripleId ?? 'x'}-${item.rank}-${item.titleJp}`"
               class="game-card"
               :class="{ highlighted: isHighlighted('egs', idx) }"
+              :ref="(el) => setCardRef('egs', idx, el)"
               @mouseenter="onHover('egs', idx)"
               @mouseleave="onHoverEnd"
             >
@@ -172,12 +175,20 @@ function formatScore(score: number | null | undefined): string {
   return score.toFixed(4);
 }
 
+function itemMatchesHighlight(item: GlobalScoreItem, h: { matchTripleId: number | null; titleNorm: string }): boolean {
+  const byMatchId =
+    typeof h.matchTripleId === "number" && h.matchTripleId !== null && !Number.isNaN(h.matchTripleId);
+  if (byMatchId) {
+    return item.matchTripleId != null && item.matchTripleId === h.matchTripleId;
+  }
+  return normalizeTitle(item.titleJp) === h.titleNorm;
+}
+
 const highlightedSet = computed(() => {
   const h = hoverHighlight.value;
   if (!h) return new Set<string>();
 
   const set = new Set<string>();
-  const byMatchId = typeof h.matchTripleId === "number";
 
   for (const [site, list] of [
     ["bangumi", data.value.bangumi],
@@ -185,17 +196,65 @@ const highlightedSet = computed(() => {
     ["egs", data.value.egs]
   ] as const) {
     list.forEach((item, idx) => {
-      if (byMatchId) {
-        if (item.matchTripleId != null && item.matchTripleId === h.matchTripleId) {
-          set.add(`${site}-${idx}`);
-        }
-      } else if (normalizeTitle(item.titleJp) === h.titleNorm) {
+      if (itemMatchesHighlight(item, h)) {
         set.add(`${site}-${idx}`);
       }
     });
   }
   return set;
 });
+
+/** Card root elements for scroll-into-view (cleared when list re-renders). */
+const cardElRefs = new Map<string, HTMLElement>();
+
+function setCardRef(site: "bangumi" | "vndb" | "egs", idx: number, el: unknown) {
+  const key = `${site}-${idx}`;
+  if (el instanceof HTMLElement) {
+    cardElRefs.set(key, el);
+  } else {
+    cardElRefs.delete(key);
+  }
+}
+
+function scrollCardIntoViewIfNeeded(site: "bangumi" | "vndb" | "egs", idx: number) {
+  const el = cardElRefs.get(`${site}-${idx}`);
+  el?.scrollIntoView({ block: "nearest", behavior: "smooth", inline: "nearest" });
+}
+
+/** Scroll other columns so the first matching card per column is visible. */
+function scrollPeerColumns(sourceSite: "bangumi" | "vndb" | "egs") {
+  const h = hoverHighlight.value;
+  if (!h) return;
+  const peers = (["bangumi", "vndb", "egs"] as const).filter((s) => s !== sourceSite);
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      for (const site of peers) {
+        const list = data.value[site];
+        const idx = list.findIndex((item) => itemMatchesHighlight(item, h));
+        if (idx >= 0) {
+          scrollCardIntoViewIfNeeded(site, idx);
+        }
+      }
+    });
+  });
+}
+
+/** Combined panel hover: scroll all three columns to the matching row. */
+function scrollAllMatchColumns() {
+  const h = hoverHighlight.value;
+  if (!h) return;
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      for (const site of ["bangumi", "vndb", "egs"] as const) {
+        const list = data.value[site];
+        const idx = list.findIndex((item) => itemMatchesHighlight(item, h));
+        if (idx >= 0) {
+          scrollCardIntoViewIfNeeded(site, idx);
+        }
+      }
+    });
+  });
+}
 
 function isHighlighted(site: "bangumi" | "vndb" | "egs", idx: number): boolean {
   return highlightedSet.value.has(`${site}-${idx}`);
@@ -213,6 +272,7 @@ function onHover(site: "bangumi" | "vndb" | "egs", idx: number) {
     matchTripleId: typeof mid === "number" && !Number.isNaN(mid) ? mid : null,
     titleNorm: normalizeTitle(item.titleJp)
   };
+  scrollPeerColumns(site);
 }
 
 function onHoverEnd() {
@@ -225,6 +285,7 @@ function onCombinedHover(matchTripleId: number | null) {
     return;
   }
   hoverHighlight.value = { matchTripleId, titleNorm: "" };
+  scrollAllMatchColumns();
 }
 
 async function loadData() {
