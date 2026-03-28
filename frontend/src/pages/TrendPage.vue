@@ -475,6 +475,11 @@ onMounted(loadData);
 .chart-block {
   position: relative;
   padding-top: 32px;
+  width: 85%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
 }
 
 .year-summary-slot {
@@ -497,12 +502,13 @@ onMounted(loadData);
   position: relative;
   overflow-x: auto;
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 14px;
 }
 
 svg {
   width: 100%;
-  min-width: 980px;
+  /* ~85% of previous 980px floor so horizontal scroll matches new scale */
+  min-width: 833px;
   display: block;
 }
 

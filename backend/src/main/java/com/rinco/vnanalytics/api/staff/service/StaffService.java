@@ -1,6 +1,7 @@
 package com.rinco.vnanalytics.api.staff.service;
 
 import com.rinco.vnanalytics.api.staff.mapper.StaffMapper;
+import com.rinco.vnanalytics.api.staff.mapper.StaffSchemaMapper;
 import com.rinco.vnanalytics.api.staff.model.StaffPersonItem;
 import com.rinco.vnanalytics.api.staff.model.StaffPersonsResponse;
 import org.springframework.stereotype.Service;
@@ -13,8 +14,9 @@ public class StaffService {
 
     private final StaffMapper staffMapper;
 
-    public StaffService(StaffMapper staffMapper) {
+    public StaffService(StaffMapper staffMapper, StaffSchemaMapper staffSchemaMapper) {
         this.staffMapper = staffMapper;
+        staffSchemaMapper.ensureAll();
     }
 
     public StaffPersonsResponse fetchPersons() {
