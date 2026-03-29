@@ -239,23 +239,6 @@ function scrollPeerColumns(sourceSite: "bangumi" | "vndb" | "egs") {
   });
 }
 
-/** Combined panel hover: scroll all three columns to the matching row. */
-function scrollAllMatchColumns() {
-  const h = hoverHighlight.value;
-  if (!h) return;
-  nextTick(() => {
-    requestAnimationFrame(() => {
-      for (const site of ["bangumi", "vndb", "egs"] as const) {
-        const list = data.value[site];
-        const idx = list.findIndex((item) => itemMatchesHighlight(item, h));
-        if (idx >= 0) {
-          scrollCardIntoViewIfNeeded(site, idx);
-        }
-      }
-    });
-  });
-}
-
 function isHighlighted(site: "bangumi" | "vndb" | "egs", idx: number): boolean {
   return highlightedSet.value.has(`${site}-${idx}`);
 }
@@ -285,7 +268,6 @@ function onCombinedHover(matchTripleId: number | null) {
     return;
   }
   hoverHighlight.value = { matchTripleId, titleNorm: "" };
-  scrollAllMatchColumns();
 }
 
 async function loadData() {

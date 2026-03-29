@@ -5,7 +5,7 @@
     <div class="controversy-header">
       <div>
         <h2>争议分布图</h2>
-        <p class="page-description">横轴评分人数（对数）、纵轴评分，气泡大小 = 评分人数，颜色越红争议越大。作品范围：{{ yearFrom }}{{ yearFrom !== yearTo ? `–${yearTo}` : '' }} 年。</p>
+        <p class="page-description">横轴为 Bangumi 评分人数（线性）；纵轴为评分（圆心纵坐标 = 分数，与网格刻度一致）；气泡半径按人数在当前数据范围内映射；颜色越红争议越大。作品范围：{{ yearFrom }}{{ yearFrom !== yearTo ? `–${yearTo}` : '' }} 年。</p>
       </div>
       <div class="controls">
         <label>
@@ -42,21 +42,29 @@
 
     <div v-else class="viz-container">
       <div class="chart-wrap">
-        <svg :viewBox="`0 0 ${svgW} ${svgH}`" class="viz-svg" @mousemove="onChartMouseMove" @mouseleave="onChartMouseLeave">
+        <svg
+          :viewBox="`0 0 ${svgW} ${svgH}`"
+          preserveAspectRatio="xMidYMid meet"
+          class="viz-svg"
+          :style="{ aspectRatio: `${svgW} / ${svgH}` }"
+          @mousemove="onChartMouseMove"
+          @mouseleave="onChartMouseLeave"
+        >
           <g v-for="(tick, i) in scoreTicks" :key="`y-${i}`">
             <line :x1="marginL" :x2="marginL + innerW" :y1="yScale(tick)" :y2="yScale(tick)" stroke="rgba(90, 157, 143, 0.35)" stroke-dasharray="2,2" />
             <text :x="marginL - 8" :y="yScale(tick) + 4" class="tick-label">{{ tick }}</text>
           </g>
           <g v-for="(tick, i) in voteTicks" :key="`x-${i}`">
             <line :x1="xScale(tick)" :y1="marginT" :x2="xScale(tick)" :y2="marginT + innerH" stroke="rgba(90, 157, 143, 0.35)" stroke-dasharray="2,2" />
-            <text :x="xScale(tick)" :y="svgH - 8" class="tick-label" text-anchor="middle">{{ tick }}</text>
+            <text :x="xScale(tick)" :y="svgH - 14" class="tick-label" text-anchor="middle">{{ tick }}</text>
           </g>
           <circle
             v-for="d in items"
             :key="d.bangumiSubjectId"
-            :cx="xScale(d.ratingTotal)"
-            :cy="yScale(d.score)"
-            :r="bubbleR(d.ratingTotal)"
+            :cx="bubblePos(d).cx"
+            :cy="bubblePos(d).cy"
+            :r="bubblePos(d).r"
+            :title="`${d.titleJp} · ${d.score.toFixed(2)} 分`"
             :fill="controversyColor(d.controversy)"
             :opacity="hoveredId === d.bangumiSubjectId ? 1 : 0.8"
             stroke="rgba(90, 157, 143, 0.4)"
@@ -109,38 +117,62 @@ const hoveredId = ref<number | null>(null);
 const mouseX = ref(0);
 const mouseY = ref(0);
 
-const svgW = 1000;
-const svgH = 650;
+/** Only widen X; keep svgH / margins so vertical mapping (score) unchanged. */
+const svgW = 1240;
+/** Extra bottom margin so x-axis tick labels stay inside viewBox (not clipped). */
+const svgH = 662;
 const marginL = 60;
 const marginT = 24;
 const marginR = 40;
-const marginB = 40;
+const marginB = 52;
 const innerW = svgW - marginL - marginR;
 const innerH = svgH - marginT - marginB;
 
+/** Same vertical domain as original chart: score min/max ± 0.5, clamped to [0,10]. */
+const SCORE_AXIS_PAD = 0.5;
+
+/** Radius vs votes (linear on current data range); strong contrast 几十 vs 几百. */
+const BUBBLE_R_MIN = 4;
+const BUBBLE_R_MAX = 30;
+
 const dataMinVotes = computed(() => Math.min(...items.value.map((d) => d.ratingTotal), 1));
 const maxVotes = computed(() => Math.max(...items.value.map((d) => d.ratingTotal), 1));
+/** Must match original semantics so yScale ↔ grid ticks stay aligned with data scores. */
 const minScore = computed(() => Math.min(...items.value.map((d) => d.score), 0));
 const maxScore = computed(() => Math.max(...items.value.map((d) => d.score), 10));
 const maxControversy = computed(() => Math.max(...items.value.map((d) => d.controversy), 0.01));
 
+/** Linear: 人数 → x（只改横向映射，不影响纵轴）。 */
 function xScale(v: number): number {
-  const logMin = Math.log10(Math.max(dataMinVotes.value, 1));
-  const logMax = Math.log10(Math.max(maxVotes.value, 1));
-  const t = (Math.log10(Math.max(v, 1)) - logMin) / (logMax - logMin || 1);
+  const lo = Math.max(0, dataMinVotes.value);
+  const hi = Math.max(maxVotes.value, lo + 1);
+  if (hi <= lo) return marginL + innerW / 2;
+  const t = (Math.max(v, 0) - lo) / (hi - lo);
   return marginL + t * innerW;
 }
 
+/** 纵轴：与原先逻辑一致，仅用 SCORE_AXIS_PAD=0.5。 */
 function yScale(s: number): number {
-  const lo = Math.max(0, minScore.value - 0.5);
-  const hi = Math.min(10, maxScore.value + 0.5);
+  const lo = Math.max(0, minScore.value - SCORE_AXIS_PAD);
+  const hi = Math.min(10, maxScore.value + SCORE_AXIS_PAD);
   const t = (s - lo) / (hi - lo || 1);
   return marginT + (1 - t) * innerH;
 }
 
 function bubbleR(votes: number): number {
-  const r = Math.sqrt(Math.log10(Math.max(votes, 1) + 1)) * 5;
-  return Math.min(Math.max(r, 3), 18);
+  const lo = Math.max(0, dataMinVotes.value);
+  const hi = Math.max(maxVotes.value, lo + 1);
+  if (hi <= lo) return (BUBBLE_R_MIN + BUBBLE_R_MAX) / 2;
+  const t = (Math.max(votes, 0) - lo) / (hi - lo);
+  return BUBBLE_R_MIN + t * (BUBBLE_R_MAX - BUBBLE_R_MIN);
+}
+
+/**
+ * 圆心必须严格落在 yScale(score) 上。此前碰撞松弛会移动 cy，且 layout 里 yOf 与 yScale 的 min/max 域不一致，
+ * 会出现「7 分画在 9 分附近」。此处不再做纵向错开。
+ */
+function bubblePos(d: ControversyItem) {
+  return { cx: xScale(d.ratingTotal), cy: yScale(d.score), r: bubbleR(d.ratingTotal) };
 }
 
 function controversyColor(c: number): string {
@@ -159,12 +191,28 @@ const scoreTicks = computed(() => {
   return arr.length ? arr : [0, 5, 10];
 });
 
+function linearVoteTicks(lo: number, hi: number): number[] {
+  if (hi <= lo) return [Math.round(lo)];
+  const span = hi - lo;
+  const rough = span / 5.5;
+  const pow10 = Math.pow(10, Math.floor(Math.log10(Math.max(rough, 1e-9))));
+  const n = rough / pow10;
+  const step = n <= 1 ? pow10 : n <= 2 ? 2 * pow10 : n <= 5 ? 5 * pow10 : 10 * pow10;
+  const start = Math.ceil(lo / step) * step;
+  const out: number[] = [];
+  for (let v = start; v <= hi + step * 0.001; v += step) {
+    out.push(Math.round(v));
+  }
+  if (out.length && out[0] > lo) out.unshift(Math.round(lo));
+  if (out.length && out[out.length - 1] < hi) out.push(Math.round(hi));
+  const uniq = [...new Set(out)].sort((a, b) => a - b);
+  return uniq.slice(0, 12);
+}
+
 const voteTicks = computed(() => {
-  const lo = Math.pow(10, Math.floor(Math.log10(Math.max(dataMinVotes.value, 1))));
-  const hi = Math.pow(10, Math.ceil(Math.log10(Math.max(maxVotes.value, 1))));
-  const arr: number[] = [];
-  for (let v = lo; v <= hi * 1.1; v *= 10) arr.push(v);
-  return arr.length ? arr : [10, 100, 1000];
+  const lo = Math.max(0, dataMinVotes.value);
+  const hi = Math.max(maxVotes.value, lo + 1);
+  return linearVoteTicks(lo, hi);
 });
 
 const hoveredItem = computed(() => {
@@ -184,9 +232,7 @@ function onChartMouseMove(e: MouseEvent) {
   let nearest: ControversyItem | null = null;
   let minD = Infinity;
   for (const d of items.value) {
-    const cx = xScale(d.ratingTotal);
-    const cy = yScale(d.score);
-    const r = bubbleR(d.ratingTotal);
+    const { cx, cy, r } = bubblePos(d);
     const d2 = (x - cx) ** 2 + (y - cy) ** 2;
     if (d2 <= r * r * 4 && d2 < minD) {
       minD = d2;
@@ -228,9 +274,12 @@ onMounted(() => loadData());
 .controversy-page {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px);
-  padding: 16px 20px;
-  overflow: hidden;
+  min-height: calc(100vh - 60px);
+  padding: 16px 20px 40px;
+  box-sizing: border-box;
+  /* Let main-content scroll; fixed height + overflow:hidden was clipping the chart bottom (x-axis). */
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .controversy-header {
@@ -255,25 +304,25 @@ onMounted(() => loadData());
 }
 
 .viz-container {
-  flex: 1;
-  min-height: 0;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
 }
 
 .chart-wrap {
-  flex: 1;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-md);
   padding: 20px;
 }
 
+/* Uniform scale only: same aspect as viewBox so circles stay round. */
 .viz-svg {
-  flex: 1;
+  display: block;
   width: 100%;
-  min-height: 400px;
+  max-width: 100%;
+  height: auto;
+  flex: 0 0 auto;
 }
 
 .tick-label {
