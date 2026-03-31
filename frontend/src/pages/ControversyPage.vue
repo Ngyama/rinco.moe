@@ -82,6 +82,15 @@
         </div>
       </div>
     </div>
+    <ControversyExtremeBars
+      v-if="!loading"
+      :year-from="yearFrom"
+      :year-to="yearTo"
+      :min-votes="minVotesFilter"
+      :items="extremeItems"
+      :loading="extremeLoading"
+      :error="extremeError"
+    />
     </template>
   </section>
 </template>
@@ -90,6 +99,7 @@
 import { computed, nextTick, onMounted, ref } from "vue";
 import { apiGet } from "../api/client";
 import PageProgressBar from "../components/PageProgressBar.vue";
+import ControversyExtremeBars from "../components/ControversyExtremeBars.vue";
 
 interface ControversyItem {
   bangumiSubjectId: number;
@@ -99,6 +109,14 @@ interface ControversyItem {
   controversy: number;
 }
 
+interface ExtremeBarRow {
+  bangumiSubjectId: number;
+  titleJp: string;
+  ratingTotal: number;
+  lowShare: number;
+  highShare: number;
+}
+
 const yearFrom = ref(2025);
 const yearTo = ref(2025);
 const minVotesFilter = ref(20);
@@ -106,6 +124,9 @@ const loading = ref(false);
 const ready = ref(false);
 const error = ref("");
 const items = ref<ControversyItem[]>([]);
+const extremeItems = ref<ExtremeBarRow[]>([]);
+const extremeLoading = ref(false);
+const extremeError = ref("");
 
 const yearOptions = Array.from({ length: 41 }, (_, i) => 1990 + i);
 
@@ -248,23 +269,40 @@ function onChartMouseLeave() {
 
 async function loadData() {
   loading.value = true;
+  extremeLoading.value = true;
   error.value = "";
-  try {
-    const json = await apiGet<{ items?: ControversyItem[] }>("/api/structure/controversy", {
-      yearFrom: yearFrom.value,
-      yearTo: yearTo.value,
-      minVotes: minVotesFilter.value
-    });
-    items.value = json.items ?? [];
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : "加载失败";
-  } finally {
-    loading.value = false;
-    await nextTick();
-    requestAnimationFrame(() => {
-      ready.value = true;
-    });
+  extremeError.value = "";
+  const params = {
+    yearFrom: yearFrom.value,
+    yearTo: yearTo.value,
+    minVotes: minVotesFilter.value
+  };
+  const results = await Promise.allSettled([
+    apiGet<{ items?: ControversyItem[] }>("/api/structure/controversy", params),
+    apiGet<{ items?: ExtremeBarRow[] }>("/api/structure/controversy/extreme-bars", params)
+  ]);
+  if (results[0].status === "fulfilled") {
+    items.value = results[0].value.items ?? [];
+    error.value = "";
+  } else {
+    items.value = [];
+    const r = results[0].reason;
+    error.value = r instanceof Error ? r.message : "加载失败";
   }
+  if (results[1].status === "fulfilled") {
+    extremeItems.value = results[1].value.items ?? [];
+    extremeError.value = "";
+  } else {
+    extremeItems.value = [];
+    const r = results[1].reason;
+    extremeError.value = r instanceof Error ? r.message : "加载失败";
+  }
+  loading.value = false;
+  extremeLoading.value = false;
+  await nextTick();
+  requestAnimationFrame(() => {
+    ready.value = true;
+  });
 }
 
 onMounted(() => loadData());

@@ -2,6 +2,8 @@ package com.rinco.vnanalytics.api.structure.service;
 
 import com.rinco.vnanalytics.api.structure.model.ControversyItem;
 import com.rinco.vnanalytics.api.structure.model.ControversyResponse;
+import com.rinco.vnanalytics.api.structure.model.ExtremeBarItem;
+import com.rinco.vnanalytics.api.structure.model.ExtremeBarsResponse;
 import com.rinco.vnanalytics.api.structure.model.HotGameDetail;
 import com.rinco.vnanalytics.api.structure.model.HotGameItem;
 import com.rinco.vnanalytics.api.structure.model.HotGamesResponse;
@@ -9,6 +11,7 @@ import com.rinco.vnanalytics.api.structure.mapper.StructureMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -20,19 +23,40 @@ public class StructureService {
         this.structureMapper = structureMapper;
     }
 
-    public HotGamesResponse fetchHotGames(int year, int limit) {
-        List<Object[]> rows = structureMapper.queryHotGames(year, limit);
+    public HotGamesResponse fetchHotGames(int year, int limit, String sort) {
+        int poolLimit = Math.min(400, Math.max(100, limit * 25));
+        List<Object[]> rows = structureMapper.queryHotGamesPool(year, poolLimit);
         List<HotGameItem> games = new ArrayList<>();
         for (Object[] r : rows) {
+            int[] counts = new int[10];
+            for (int i = 0; i < 10; i++) {
+                counts[i] = ((Number) r[5 + i]).intValue();
+            }
+            int total = 0;
+            for (int c : counts) {
+                total += c;
+            }
+            double controversy = computeStdDev(counts, total);
             games.add(new HotGameItem(
                     (Long) r[0],
                     (String) r[1],
                     r[2] != null ? ((Number) r[2]).doubleValue() : null,
                     (Integer) r[3],
-                    (String) r[4]
+                    (String) r[4],
+                    controversy
             ));
         }
-        return new HotGamesResponse(year, games);
+        String s = sort == null ? "markers" : sort.trim().toLowerCase();
+        Comparator<HotGameItem> cmp = switch (s) {
+            case "score" -> Comparator.comparing(HotGameItem::score, Comparator.nullsLast(Comparator.reverseOrder()));
+            case "rating" -> Comparator.comparing(HotGameItem::ratingTotal, Comparator.nullsLast(Comparator.reverseOrder()));
+            case "controversy" -> Comparator.comparingDouble(HotGameItem::controversy).reversed();
+            default -> Comparator.comparing(HotGameItem::ratingTotal, Comparator.nullsLast(Comparator.reverseOrder()));
+        };
+        games.sort(cmp);
+        int take = Math.min(limit, games.size());
+        List<HotGameItem> top = new ArrayList<>(games.subList(0, take));
+        return new HotGamesResponse(year, top);
     }
 
     public HotGameDetail fetchHotGameDetail(long bangumiSubjectId) {
@@ -88,6 +112,33 @@ public class StructureService {
             ));
         }
         return new ControversyResponse(yearFrom, yearTo, items);
+    }
+
+    public ExtremeBarsResponse fetchExtremeBars(int yearFrom, int yearTo, int minVotes) {
+        List<Object[]> rows = structureMapper.queryControversyTopForExtremeBars(yearFrom, yearTo, minVotes, 10);
+        List<ExtremeBarItem> out = new ArrayList<>();
+        for (Object[] r : rows) {
+            int[] counts = new int[10];
+            for (int i = 0; i < 10; i++) {
+                counts[i] = ((Number) r[4 + i]).intValue();
+            }
+            int total = ((Number) r[3]).intValue();
+            if (total <= 0) {
+                continue;
+            }
+            int low = counts[0] + counts[1];
+            int high = counts[8] + counts[9];
+            double lowShare = (double) low / total;
+            double highShare = (double) high / total;
+            out.add(new ExtremeBarItem(
+                    (Long) r[0],
+                    (String) r[1],
+                    total,
+                    lowShare,
+                    highShare
+            ));
+        }
+        return new ExtremeBarsResponse(yearFrom, yearTo, out);
     }
 
     private double computeMedian(int[] counts, int total) {

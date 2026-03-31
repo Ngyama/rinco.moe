@@ -5,6 +5,8 @@ public record HotGameItem(
         String titleJp,
         Double score,
         Integer ratingTotal,
-        String releaseDate
+        String releaseDate,
+        /** Std-dev of 1–10 score distribution; higher = more controversial. */
+        double controversy
 ) {
 }

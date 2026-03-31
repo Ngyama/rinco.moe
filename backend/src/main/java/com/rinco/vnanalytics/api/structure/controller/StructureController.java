@@ -1,6 +1,7 @@
 package com.rinco.vnanalytics.api.structure.controller;
 
 import com.rinco.vnanalytics.api.structure.model.ControversyResponse;
+import com.rinco.vnanalytics.api.structure.model.ExtremeBarsResponse;
 import com.rinco.vnanalytics.api.structure.model.HotGameDetail;
 import com.rinco.vnanalytics.api.structure.model.HotGamesResponse;
 import com.rinco.vnanalytics.api.structure.service.StructureService;
@@ -28,9 +29,10 @@ public class StructureController {
     @GetMapping("/hot")
     public HotGamesResponse getHotGames(
             @RequestParam(defaultValue = "2025") @Min(1990) @Max(2030) int year,
-            @RequestParam(defaultValue = "5") @Min(1) @Max(50) int limit
+            @RequestParam(defaultValue = "5") @Min(1) @Max(50) int limit,
+            @RequestParam(defaultValue = "markers") String sort
     ) {
-        return structureService.fetchHotGames(year, limit);
+        return structureService.fetchHotGames(year, limit, sort);
     }
 
     @GetMapping("/hot/{id}")
@@ -46,5 +48,14 @@ public class StructureController {
             @RequestParam(defaultValue = "20") @Min(0) @Max(5000) int minVotes
     ) {
         return structureService.fetchControversy(yearFrom, yearTo, minVotes);
+    }
+
+    @GetMapping("/controversy/extreme-bars")
+    public ExtremeBarsResponse getExtremeBars(
+            @RequestParam(defaultValue = "2000") @Min(1990) @Max(2030) int yearFrom,
+            @RequestParam(defaultValue = "2025") @Min(1990) @Max(2030) int yearTo,
+            @RequestParam(defaultValue = "20") @Min(0) @Max(5000) int minVotes
+    ) {
+        return structureService.fetchExtremeBars(yearFrom, yearTo, minVotes);
     }
 }

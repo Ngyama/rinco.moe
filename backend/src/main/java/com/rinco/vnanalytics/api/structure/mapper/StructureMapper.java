@@ -32,14 +32,21 @@ public class StructureMapper {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public List<Object[]> queryHotGames(int year, int limit) {
+    /**
+     * Larger pool than final limit; service sorts and truncates.
+     * Includes r1..r10 for per-row controversy (std-dev).
+     */
+    public List<Object[]> queryHotGamesPool(int year, int poolLimit) {
         String sql = QUALIFIED_CTE + """
                 SELECT
                     s.bangumi_subject_id,
                     COALESCE(NULLIF(s.title_jp, ''), s.title) AS title_jp,
                     COALESCE(s.score_exact, s.score_api, s.score) AS score,
                     s.rating_total,
-                    s.release_date::TEXT
+                    s.release_date::TEXT,
+                    COALESCE(s.rating_1, 0) AS r1, COALESCE(s.rating_2, 0) AS r2, COALESCE(s.rating_3, 0) AS r3,
+                    COALESCE(s.rating_4, 0) AS r4, COALESCE(s.rating_5, 0) AS r5, COALESCE(s.rating_6, 0) AS r6,
+                    COALESCE(s.rating_7, 0) AS r7, COALESCE(s.rating_8, 0) AS r8, COALESCE(s.rating_9, 0) AS r9, COALESCE(s.rating_10, 0) AS r10
                 FROM vn_bangumi_subject s
                 WHERE s.bangumi_subject_id IN (SELECT bangumi_subject_id FROM qualified_subject)
                   AND EXTRACT(YEAR FROM s.release_date) = ?
@@ -55,8 +62,10 @@ public class StructureMapper {
                 rs.getString("title_jp"),
                 rs.getBigDecimal("score") == null ? null : rs.getBigDecimal("score").doubleValue(),
                 rs.getObject("rating_total"),
-                rs.getString("release_date")
-        }, year, EXCLUSION_REGEX, limit);
+                rs.getString("release_date"),
+                rs.getInt("r1"), rs.getInt("r2"), rs.getInt("r3"), rs.getInt("r4"), rs.getInt("r5"),
+                rs.getInt("r6"), rs.getInt("r7"), rs.getInt("r8"), rs.getInt("r9"), rs.getInt("r10")
+        }, year, EXCLUSION_REGEX, poolLimit);
     }
 
     public Object[] queryHotGameDetail(long bangumiSubjectId) {
@@ -113,6 +122,41 @@ public class StructureMapper {
                 rs.getInt("r1"), rs.getInt("r2"), rs.getInt("r3"), rs.getInt("r4"), rs.getInt("r5"),
                 rs.getInt("r6"), rs.getInt("r7"), rs.getInt("r8"), rs.getInt("r9"), rs.getInt("r10")
         }, yearFrom, yearTo, minVotes, EXCLUSION_REGEX);
+    }
+
+    /**
+     * Same filters as {@link #queryControversy} but only the top {@code limit} by vote count,
+     * for 1–2 vs 9–10 share visualization.
+     */
+    public List<Object[]> queryControversyTopForExtremeBars(int yearFrom, int yearTo, int minVotes, int limit) {
+        String sql = QUALIFIED_CTE + """
+                SELECT
+                    s.bangumi_subject_id,
+                    COALESCE(NULLIF(s.title_jp, ''), s.title) AS title_jp,
+                    COALESCE(s.score_exact, s.score_api, s.score) AS score,
+                    s.rating_total,
+                    COALESCE(s.rating_1, 0) AS r1, COALESCE(s.rating_2, 0) AS r2, COALESCE(s.rating_3, 0) AS r3,
+                    COALESCE(s.rating_4, 0) AS r4, COALESCE(s.rating_5, 0) AS r5, COALESCE(s.rating_6, 0) AS r6,
+                    COALESCE(s.rating_7, 0) AS r7, COALESCE(s.rating_8, 0) AS r8, COALESCE(s.rating_9, 0) AS r9, COALESCE(s.rating_10, 0) AS r10
+                FROM vn_bangumi_subject s
+                WHERE s.bangumi_subject_id IN (SELECT bangumi_subject_id FROM qualified_subject)
+                  AND s.release_date IS NOT NULL
+                  AND EXTRACT(YEAR FROM s.release_date) BETWEEN ? AND ?
+                  AND COALESCE(s.rating_total, 0) >= ?
+                  AND COALESCE(s.excluded_from_rank, FALSE) = FALSE
+                  AND COALESCE(NULLIF(s.title_jp, ''), s.title, '') !~* ?
+                  AND COALESCE(s.score_exact, s.score_api, s.score) IS NOT NULL
+                ORDER BY s.rating_total DESC
+                LIMIT ?
+                """;
+        return jdbcTemplate.query(sql, (rs, rowNum) -> new Object[]{
+                rs.getLong("bangumi_subject_id"),
+                rs.getString("title_jp"),
+                rs.getBigDecimal("score").doubleValue(),
+                rs.getInt("rating_total"),
+                rs.getInt("r1"), rs.getInt("r2"), rs.getInt("r3"), rs.getInt("r4"), rs.getInt("r5"),
+                rs.getInt("r6"), rs.getInt("r7"), rs.getInt("r8"), rs.getInt("r9"), rs.getInt("r10")
+        }, yearFrom, yearTo, minVotes, EXCLUSION_REGEX, limit);
     }
 
     public java.util.Set<Long> queryGalgameSubjectIds() {
