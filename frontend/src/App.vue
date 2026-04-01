@@ -166,6 +166,8 @@ onUnmounted(() => {
 
 .main-content {
   flex: 1;
+  width: 100%;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
