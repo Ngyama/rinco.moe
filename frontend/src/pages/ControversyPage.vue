@@ -1,5 +1,5 @@
 <template>
-  <section class="page-shell controversy-page">
+  <section class="page-shell page-shell--fixed controversy-page">
     <PageProgressBar v-if="!ready" />
     <template v-else>
     <div class="controversy-header">
@@ -34,6 +34,7 @@
       </div>
     </div>
 
+    <div class="controversy-page-body">
     <p v-if="loading" class="loading-placeholder">加载中</p>
     <p v-else-if="error" class="error-text">{{ error }}</p>
     <div v-else-if="!items.length" class="empty-state">
@@ -91,6 +92,7 @@
       :loading="extremeLoading"
       :error="extremeError"
     />
+    </div>
     </template>
   </section>
 </template>
@@ -312,12 +314,20 @@ onMounted(() => loadData());
 .controversy-page {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 60px);
-  padding: 16px 20px 40px;
+  min-height: 0;
+  padding: 0;
   box-sizing: border-box;
-  /* Let main-content scroll; fixed height + overflow:hidden was clipping the chart bottom (x-axis). */
+  overflow: hidden;
+}
+
+.controversy-page-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-x: hidden;
-  overflow-y: visible;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .controversy-header {
@@ -327,6 +337,7 @@ onMounted(() => loadData());
   gap: 20px;
   flex-shrink: 0;
   margin-bottom: 12px;
+  padding: 0 4px 0 0;
 }
 
 .controversy-header h2 {

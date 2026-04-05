@@ -163,6 +163,19 @@ a {
   background: linear-gradient(180deg, var(--color-bg) 0%, rgba(254, 253, 202, 0.15) 50%, var(--color-bg) 100%);
 }
 
+/* 与 route.meta.fixedViewport 配合：顶栏以下单屏，主区域不滚动 */
+.page-shell.page-shell--fixed {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 12px 24px 14px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
 .page-shell h2 {
   margin: 0 0 8px;
   font-size: 24px;

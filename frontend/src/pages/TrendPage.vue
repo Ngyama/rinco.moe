@@ -1,7 +1,8 @@
 <template>
-  <section class="page-shell">
+  <section class="page-shell page-shell--fixed trend-page">
     <PageProgressBar v-if="!ready" />
     <template v-else>
+      <div class="trend-page-head">
       <h2>时间趋势 - Bangumi 历史评分</h2>
       <p class="page-description">横轴为发售年份，点表示每部作品分数，折线表示当年平均分。悬停点可看作品名与分数。</p>
 
@@ -29,6 +30,7 @@
       </label>
       <button type="button" class="reload-btn" @click="loadData">刷新</button>
     </div>
+      </div>
 
       <p v-if="loading" class="loading-placeholder">加载中</p>
       <p v-else-if="error" class="error-text">{{ error }}</p>
@@ -464,12 +466,22 @@ onMounted(loadData);
 </script>
 
 <style scoped>
+.trend-page-head {
+  flex-shrink: 0;
+}
+
+.trend-page > .loading-placeholder,
+.trend-page > .error-text,
+.trend-page > .empty-state {
+  flex-shrink: 0;
+}
+
 .page-description {
   margin: 0 0 14px;
 }
 
 .controls {
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 
 .chart-block {
@@ -480,6 +492,10 @@ onMounted(loadData);
   margin-left: auto;
   margin-right: auto;
   box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .year-summary-slot {
@@ -500,9 +516,11 @@ onMounted(loadData);
 
 .chart-wrap {
   position: relative;
-  overflow-x: auto;
+  overflow: auto;
   border-radius: var(--radius-md);
   padding: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 svg {

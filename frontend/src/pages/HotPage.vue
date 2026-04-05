@@ -1,5 +1,5 @@
 <template>
-  <section class="page-shell hot-page">
+  <section class="page-shell page-shell--fixed hot-page">
     <PageProgressBar v-if="!ready" />
     <template v-else>
     <div class="page-header-row">
@@ -319,16 +319,23 @@ onMounted(() => {
 
 <style scoped>
 .hot-page {
-  padding-bottom: 32px;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .hot-page-content {
   display: flex;
   flex-direction: column;
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .page-header-row {
+  flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -339,6 +346,11 @@ onMounted(() => {
 
 .controls-wrap {
   flex-wrap: wrap;
+}
+
+.hot-page > .loading-placeholder,
+.hot-page > .error-text {
+  flex-shrink: 0;
 }
 
 .loading-placeholder,

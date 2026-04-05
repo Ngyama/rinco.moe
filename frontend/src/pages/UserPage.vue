@@ -1,5 +1,5 @@
 <template>
-  <section class="page-shell user-page">
+  <section class="page-shell page-shell--fixed user-page">
     <PageProgressBar v-if="!ready" />
     <template v-else>
       <div class="user-header">
@@ -203,9 +203,11 @@ onMounted(() => {
   box-sizing: border-box;
   width: 100%;
   max-width: none;
-  padding: 16px clamp(16px, 3vw, 40px) 40px;
-  min-height: 200px;
-  display: block;
+  padding: 12px clamp(16px, 3vw, 40px) 12px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .user-dashboard {
@@ -214,12 +216,19 @@ onMounted(() => {
   gap: clamp(16px, 2.5vw, 32px);
   align-items: stretch;
   width: 100%;
-  min-height: min(76vh, 780px);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.user-dashboard > * {
+  min-height: 0;
 }
 
 .user-dist-column {
+  box-sizing: border-box;
   min-width: 0;
-  max-width: min(100%, 430px);
+  width: 100%;
+  max-width: 100%;
   padding: 16px 14px 18px;
   background: rgba(90, 157, 143, 0.06);
   border-radius: var(--radius-md);
@@ -231,7 +240,8 @@ onMounted(() => {
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  max-height: min(78vh, 840px);
+  min-height: 0;
+  max-height: none;
   background: transparent;
   border: none;
   border-radius: 0;
@@ -252,6 +262,15 @@ onMounted(() => {
   overflow-x: hidden;
   padding: 12px 14px 18px;
   -webkit-overflow-scrolling: touch;
+  /* 隐藏滚动条，仍可用滚轮 / 触控滑动 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.user-list-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .user-list-empty {
@@ -268,7 +287,7 @@ onMounted(() => {
 @media (max-width: 960px) {
   .user-dashboard {
     grid-template-columns: 1fr;
-    min-height: auto;
+    min-height: 0;
   }
 
   .user-dist-column {
@@ -276,19 +295,19 @@ onMounted(() => {
   }
 
   .user-list-column {
-    max-height: min(62vh, 620px);
+    max-height: none;
+    min-height: 0;
   }
 }
 
 @media (min-width: 961px) {
-  /* 左栏略窄（分布 + 竖排条形），右栏详情更宽；两栏紧贴，仅留窄缝 */
+  /* 左栏（评分分布外框）约占内容区宽度 40%，整框随栅格向右延伸，不再用 max-width 卡死 */
   .user-dashboard {
-    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
     gap: 6px;
   }
 
   .user-dist-column {
-    max-width: min(100%, 430px);
     padding-right: 8px;
   }
 
@@ -299,6 +318,7 @@ onMounted(() => {
 
 .user-header {
   margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 .user-header h2 {
@@ -313,6 +333,7 @@ onMounted(() => {
 }
 
 .dev-banner {
+  flex-shrink: 0;
   margin: 0 0 20px;
   padding: 10px 14px;
   font-size: 13px;
@@ -328,6 +349,7 @@ onMounted(() => {
 }
 
 .user-input-row {
+  flex-shrink: 0;
   display: flex;
   gap: 12px;
   margin-bottom: 20px;
@@ -370,12 +392,14 @@ onMounted(() => {
 }
 
 .hint-text {
+  flex-shrink: 0;
   margin: 0;
   color: var(--color-text-muted);
   font-size: 14px;
 }
 
 .error-text {
+  flex-shrink: 0;
   color: var(--color-error, #c55);
   margin: 0 0 16px;
 }

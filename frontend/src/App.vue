@@ -1,5 +1,5 @@
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'app-shell--fixed': fixedViewport }">
     <div class="capsule-wrapper">
       <nav ref="capsuleRef" class="capsule">
         <div class="capsule-indicator" :style="indicatorStyle" />
@@ -16,10 +16,16 @@
         </a>
       </nav>
     </div>
-    <main class="main-content">
+    <main class="main-content" :class="{ 'main-content--fixed': fixedViewport }">
       <router-view v-slot="{ Component }">
         <Transition name="page-fade" mode="out-in">
-          <component :is="Component" />
+          <div
+            :key="route.path"
+            class="router-view-fill"
+            :class="{ 'router-view-fill--fixed': fixedViewport }"
+          >
+            <component :is="Component" />
+          </div>
         </Transition>
       </router-view>
     </main>
@@ -61,7 +67,7 @@ function updateIndicator() {
   if (link && capsule) {
     const capsuleRect = capsule.getBoundingClientRect();
     const linkRect = link.getBoundingClientRect();
-    indicatorLeft.value = linkRect.left - capsuleRect.left - 10; /* offset for capsule padding */
+    indicatorLeft.value = linkRect.left - capsuleRect.left - 8; /* offset for capsule padding */
     indicatorWidth.value = linkRect.width;
   }
 }
@@ -70,6 +76,8 @@ const indicatorStyle = computed(() => ({
   transform: `translateX(${indicatorLeft.value}px)`,
   width: `${indicatorWidth.value}px`
 }));
+
+const fixedViewport = computed(() => Boolean(route.meta.fixedViewport));
 
 watch(
   () => route.path,
@@ -97,6 +105,12 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+.app-shell--fixed {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
 .capsule-wrapper {
   position: sticky;
   top: 0;
@@ -104,35 +118,35 @@ onUnmounted(() => {
   isolation: isolate;
   flex-shrink: 0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
-  padding: 28px 24px 24px;
-  background: linear-gradient(180deg, var(--color-bg) 0%, rgba(245, 251, 248, 0.6) 100%);
-  backdrop-filter: blur(8px);
+  padding: 16px 20px 8px;
+  background: transparent;
 }
 
 .capsule {
   position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 10px 10px 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fcf9 100%);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  padding: 8px 8px 9px;
+  background: transparent;
+  border: none;
   border-radius: 9999px;
-  box-shadow:
-    0 4px 6px rgba(165, 222, 229, 0.25),
-    0 10px 30px rgba(0, 0, 0, 0.1),
-    0 1px 0 rgba(255, 255, 255, 0.95) inset;
+  box-shadow: none;
 }
 
 .capsule-indicator {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  height: calc(100% - 20px);
-  background: linear-gradient(180deg, rgba(224, 249, 181, 0.95) 0%, rgba(165, 222, 229, 0.85) 100%);
+  top: 8px;
+  left: 8px;
+  height: calc(100% - 16px);
+  background: linear-gradient(
+    180deg,
+    rgba(224, 249, 181, 0.45) 0%,
+    rgba(165, 222, 229, 0.4) 100%
+  );
   border-radius: 9999px;
-  box-shadow: 0 2px 8px rgba(74, 184, 196, 0.35), 0 1px 2px rgba(165, 222, 229, 0.4);
+  box-shadow: 0 1px 4px rgba(74, 184, 196, 0.2);
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
   pointer-events: none;
 }
@@ -140,10 +154,10 @@ onUnmounted(() => {
 .capsule-link {
   position: relative;
   z-index: 2;
-  padding: 10px 20px;
+  padding: 8px 14px;
   cursor: pointer;
   pointer-events: auto;
-  font-size: 15px;
+  font-size: 13px;
   color: var(--color-text-muted);
   border-radius: 9999px;
   transition: color 0.35s ease, transform 0.25s ease;
@@ -174,8 +188,29 @@ onUnmounted(() => {
   -ms-overflow-style: none;
 }
 
+.main-content--fixed {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .main-content::-webkit-scrollbar {
   display: none;
+}
+
+.router-view-fill {
+  min-height: 0;
+}
+
+.router-view-fill--fixed {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Page transition */
