@@ -39,18 +39,28 @@
       </div>
 
       <div v-else class="chart-block">
-        <div class="year-summary-slot">
+        <div class="chart-wrap">
+        <!-- 固定高度占位，避免有/无悬停文案时 flex 把 SVG 撑大撑小 -->
+        <div
+          class="year-summary-ribbon"
+          aria-live="polite"
+          :aria-hidden="!hoverSummary"
+        >
           <div v-if="hoverSummary" class="year-summary">
-            <strong>{{ hoverSummary.year }} 年</strong>
+            <strong class="year-summary-title">{{ hoverSummary.year }} 年</strong>
             <span>均分 {{ hoverSummary.avgScore.toFixed(4) }}</span>
             <span>样本 {{ hoverSummary.count }}</span>
-            <span>最高 {{ hoverSummary.top.title }} ({{ hoverSummary.top.score.toFixed(4) }})</span>
-            <span>最低 {{ hoverSummary.bottom.title }} ({{ hoverSummary.bottom.score.toFixed(4) }})</span>
+            <span class="year-summary-line-long"
+              >最高 {{ hoverSummary.top.title }} ({{ hoverSummary.top.score.toFixed(4) }})</span
+            >
+            <span class="year-summary-line-long"
+              >最低 {{ hoverSummary.bottom.title }} ({{ hoverSummary.bottom.score.toFixed(4) }})</span
+            >
           </div>
         </div>
-        <div class="chart-wrap">
       <svg
         :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Bangumi 年度评分趋势图"
         @mousemove="onChartMouseMove"
@@ -466,6 +476,12 @@ onMounted(loadData);
 </script>
 
 <style scoped>
+/* 整页略收紧左右，图表区才明显变宽（全局 .page-shell--fixed 是 24px，这里要盖过去） */
+.trend-page.page-shell.page-shell--fixed {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
 .trend-page-head {
   flex-shrink: 0;
 }
@@ -484,13 +500,14 @@ onMounted(loadData);
   margin-bottom: 0;
 }
 
+/* 横向上尽量铺满内容区；不改 script 里 svg 坐标，仅整体等比缩放 */
 .chart-block {
   position: relative;
-  padding-top: 32px;
-  width: 85%;
+  padding-top: 0;
+  width: 100%;
   max-width: 100%;
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 0;
+  margin-right: 0;
   box-sizing: border-box;
   flex: 1 1 auto;
   min-height: 0;
@@ -498,35 +515,76 @@ onMounted(loadData);
   flex-direction: column;
 }
 
-.year-summary-slot {
-  position: absolute;
-  top: 0;
-  left: 0;
-  font-size: 11px;
-  color: var(--color-text-muted);
+/* 悬停年份信息：固定高度带，图表区域高度不再随是否有字变化 */
+.year-summary-ribbon {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 11rem;
+  min-height: 11rem;
+  max-height: 11rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 4px 8px;
   z-index: 2;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .year-summary {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   margin: 0;
+  text-align: center;
+  max-width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.year-summary-title {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.year-summary span {
+  max-width: min(100%, 52rem);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.year-summary .year-summary-line-long {
+  text-align: center;
+  padding: 0 4px;
 }
 
 .chart-wrap {
   position: relative;
-  overflow: auto;
+  overflow: hidden;
   border-radius: var(--radius-md);
-  padding: 14px;
+  /* 仅压缩左右内边距，让绘图区在视觉上更宽；上下保持可读间距 */
+  padding: 12px 6px;
+  box-sizing: border-box;
   flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 svg {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   width: 100%;
-  /* ~85% of previous 980px floor so horizontal scroll matches new scale */
-  min-width: 833px;
+  height: 100%;
   display: block;
 }
 
