@@ -125,7 +125,6 @@ import { apiGet } from "../api/client";
 import PageProgressBar from "../components/PageProgressBar.vue";
 import GlobalSankeyPanel from "../components/GlobalSankeyPanel.vue";
 import GlobalCombinedTopPanel from "../components/GlobalCombinedTopPanel.vue";
-import Panel from "../components/Panel.vue";
 
 interface GlobalScoreItem {
   rank: number;
