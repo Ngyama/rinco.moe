@@ -2,7 +2,10 @@
   <section class="page-shell global-new-page">
     <PageProgressBar v-if="!ready" />
     <template v-else>
-      <h2>评分总览 - 匹配池 Top 25</h2>
+      <div class="page-heading">
+        <div><span class="eyebrow">CROSS-PLATFORM INDEX</span><h2>评分总览 · 匹配池 Top 25</h2></div>
+        <span class="data-badge">LIVE DATA</span>
+      </div>
       <p class="page-description">
         数据来自脚本维护的小型 vn_match_triple 池（先 Bangumi Top25 入池并自动对齐 VNDB/EGS，再补 VNDB Top25、EGS Top25 未出现条目；允许缺站或缺分，便于在后台修正）。三列按各站在池内的评分各取前
         25。悬停高亮：优先 matchTripleId，否则标题规范化一致。
@@ -122,6 +125,7 @@ import { apiGet } from "../api/client";
 import PageProgressBar from "../components/PageProgressBar.vue";
 import GlobalSankeyPanel from "../components/GlobalSankeyPanel.vue";
 import GlobalCombinedTopPanel from "../components/GlobalCombinedTopPanel.vue";
+import Panel from "../components/Panel.vue";
 
 interface GlobalScoreItem {
   rank: number;
@@ -307,9 +311,11 @@ onMounted(loadData);
 </script>
 
 <style scoped>
-.global-new-page {
-  padding-bottom: 48px;
-}
+.global-new-page { padding-bottom: 48px; }
+.page-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:8px; }
+.eyebrow { display:block; margin-bottom:6px; color:var(--color-accent); font-size:10px; font-weight:800; letter-spacing:.13em; }
+.data-badge { padding:5px 8px; border:1px solid #cce4dc; border-radius:6px; color:#4e9079; background:#edf8f3; font-size:10px; font-weight:800; letter-spacing:.08em; }
+
 
 .page-description {
   margin: 0 0 16px;
