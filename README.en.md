@@ -50,3 +50,23 @@ This project **aggregates and visualizes data from public APIs and statistics pa
 | **ErogameScape (EGS)** | Averages, etc. (e.g. SQL API) |
 
 Accuracy and freshness depend on the upstream sources. Check each site’s rules before redistribution or commercial use.
+
+---
+
+## Frontend-only local development (no database)
+
+When the Spring Boot backend or PostgreSQL is unavailable, the frontend can **fall back to mock data** in development so existing pages remain inspectable. Real `/api` responses stay primary.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+| `VITE_USE_MOCK_DATA` | Behavior |
+|----------------------|----------|
+| `true` (default in `.env.development`) | Try the real API; on failure return mocks |
+| `force` | Skip the network; always use mocks |
+| `false` | Disable mocks |
+
+Implementation: fallback inside `frontend/src/api/client.ts` (`apiGet`). Data lives under `frontend/src/api/mocks/` (see that folder’s `README.md`). Production builds do not enable this by default.

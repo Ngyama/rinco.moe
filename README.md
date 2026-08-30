@@ -50,3 +50,23 @@
 | **ErogameScape (EGS)** | 平均点など（SQL API 等） |
 
 一次データの正確さ・更新頻度はソース側に依存します。再配布や商用利用を行う場合は、各サイトの条件を必ず確認してください。
+
+---
+
+## フロントエンドのみのローカル開発（DB なし）
+
+バックエンド / PostgreSQL が使えないとき、開発モードでは **モックデータ** にフォールバックし、既存画面の確認・改修ができます。本番の `/api` が優先です。
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+| `VITE_USE_MOCK_DATA` | 動作 |
+|----------------------|------|
+| `true`（`.env.development` 既定） | 実 API を試し、失敗時にモック |
+| `force` | 通信せず常にモック |
+| `false` | モック無効 |
+
+実装: `frontend/src/api/client.ts` の `apiGet`。データ: `frontend/src/api/mocks/`（同ディレクトリの `README.md` 参照）。本番ビルドでは既定で無効です。

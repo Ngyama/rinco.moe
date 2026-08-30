@@ -50,3 +50,23 @@
 | **ErogameScape（EGS）** | 平均分等（如 SQL API） |
 
 数据准确性与更新频率取决于上游；若涉及再分发或商用，请务必自行核对各站要求。
+
+---
+
+## 本地前端开发（无数据库）
+
+后端或 PostgreSQL 不可用时，前端可在开发模式下回退到 **mock 数据**，便于浏览与改版现有页面。真实 `/api` 仍为优先数据源。
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+| `VITE_USE_MOCK_DATA` | 行为 |
+|----------------------|------|
+| `true`（`.env.development` 默认） | 先请求真实 API；失败时返回 mock |
+| `force` | 跳过网络，始终使用 mock |
+| `false` | 禁用 mock（与生产一致） |
+
+Mock 实现：`frontend/src/api/client.ts` 的 `apiGet` 回退；数据在 `frontend/src/api/mocks/`（详见该目录 `README.md`）。生产构建默认不启用该回退。
